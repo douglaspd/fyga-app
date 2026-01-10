@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@mipmap/fyga_launcher" />
+    <foreground android:drawable="@mipmap/fyga_launcher" />
+    <monochrome android:drawable="@mipmap/fyga_launcher" />
+</adaptive-icon>

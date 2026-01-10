@@ -1,0 +1,65 @@
+package com.example.fyga.ui.register
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+
+@Composable
+fun RegisterScreen(
+    isLoading: Boolean = false,
+    onRegisterClick: () -> Unit = {},
+    onTypeRegister: () -> Unit = {},
+    onRegisterSuccess: () -> Unit = {},
+    onBack: () -> Unit = {}, // 🔹 adicionamos esse parâmetro que o MainActivity espera
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .padding(24.dp),
+            contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "Eu sou",
+                color = Color.White,
+                style = MaterialTheme.typography.headlineSmall
+            )
+
+            Spacer(Modifier.height(32.dp))
+
+            Button(
+                onClick = onRegisterClick,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B0000))
+            ) {
+                Text("Gothic", color = Color.White)
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            Button(
+                onClick = onRegisterClick,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B0000))
+            ) {
+                Text("Hunter", color = Color.White)
+            }
+
+            Spacer(Modifier.height(32.dp))
+
+            TextButton(onClick = onBack) { // 🔹 botão para voltar à tela de login
+                Text("Voltar", color = Color.White)
+            }
+        }
+    }
+}

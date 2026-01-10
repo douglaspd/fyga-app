@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "901715407917",
+    "project_id": "fyga-2e0b0",
+    "storage_bucket": "fyga-2e0b0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:901715407917:android:7547926bc5d6a6e85d34a4",
+        "android_client_info": {
+          "package_name": "com.goth.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCsqbKUFaP0rzZCO_ic0cLsOIGuUdnn9TA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

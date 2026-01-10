@@ -1,0 +1,20 @@
+# Ignore Android Studio/IDE stuff
+.idea/
+*.iml
+
+# Gradle
+.gradle/
+local.properties
+
+# Build outputs
+/build/
+app/build/
+
+# C++/NDK
+.cxx/
+.externalNativeBuild/
+
+# Others
+.DS_Store
+*.log
+app/src/main/res/drawable/android-studio-*
