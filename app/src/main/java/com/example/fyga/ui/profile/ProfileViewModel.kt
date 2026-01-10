@@ -83,15 +83,15 @@ class ProfileViewModel(
 
     fun addComment(postId: String, commentText: String) {
         val currentUser = authRepository.currentUser ?: return
-        val username = _uiState.value.user?.username ?: "Anônimo" // Usa o username do perfil carregado
+        // Usamos o username real do perfil carregado no estado
+        val username = _uiState.value.user?.username ?: "Anônimo"
         val comment = Comment(username = username, text = commentText)
 
         viewModelScope.launch {
             try {
                 postRepository.addComment(postId, comment)
-                // O listener em tempo real no Feed cuidaria disso, 
-                // mas aqui no perfil talvez precisemos recarregar ou confiar no Firestore.
-                // Como não temos listener em tempo real no perfil ainda, vou recarregar os posts.
+                // Como o Perfil não tem listener em tempo real (diferente do Feed),
+                // recarregamos os posts para mostrar o novo comentário imediatamente.
                 val userPosts = userRepository.getPostsForUser(currentUser.uid)
                 _uiState.value = _uiState.value.copy(posts = userPosts)
             } catch (e: Exception) {

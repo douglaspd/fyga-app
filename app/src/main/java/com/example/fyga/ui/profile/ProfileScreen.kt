@@ -26,6 +26,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.fyga.data.model.AccountType
 import com.example.fyga.data.model.Post
+import com.example.fyga.ui.components.VideoPlayer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -145,21 +146,31 @@ private fun PostCardProfile(
     var commentsVisible by remember { mutableStateOf(false) }
     var newCommentText by remember { mutableStateOf("") }
 
+    // Detecção de vídeo
+    val isVideo = post.imageUrl.contains(".mp4", ignoreCase = true) || 
+                  post.imageUrl.contains(".mov", ignoreCase = true) ||
+                  post.imageUrl.contains("post_videos", ignoreCase = true)
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        Image(
-            painter = rememberAsyncImagePainter(post.imageUrl),
-            contentDescription = "Post image",
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(380.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color.DarkGray),
-            contentScale = ContentScale.Crop
-        )
+        if (isVideo) {
+            VideoPlayer(videoUrl = post.imageUrl)
+        } else {
+            Image(
+                painter = rememberAsyncImagePainter(post.imageUrl),
+                contentDescription = "Post image",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(380.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.DarkGray),
+                contentScale = ContentScale.Crop
+            )
+        }
+        
         Spacer(modifier = Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onLikeClick) {
