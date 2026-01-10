@@ -2,6 +2,7 @@ package com.example.fyga.ui.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.fyga.data.model.Comment
 import com.example.fyga.data.model.Post
 import com.example.fyga.data.model.User
 import com.example.fyga.data.repository.AuthRepository
@@ -15,7 +16,7 @@ data class ProfileUiState(
     val isLoading: Boolean = true,
     val user: User? = null,
     val posts: List<Post> = emptyList(),
-    val currentUserId: String? = null, // Adicionado para saber quem está logado
+    val currentUserId: String? = null,
     val errorMessage: String? = null,
     val logoutSuccess: Boolean = false
 )
@@ -41,7 +42,6 @@ class ProfileViewModel(
                 return@launch
             }
 
-            // Define o ID do usuário logado no estado
             _uiState.value = _uiState.value.copy(currentUserId = firebaseUser.uid)
 
             try {
@@ -77,6 +77,25 @@ class ProfileViewModel(
                 postRepository.toggleLike(postId, currentUserId)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(posts = currentPosts)
+            }
+        }
+    }
+
+    fun addComment(postId: String, commentText: String) {
+        val currentUser = authRepository.currentUser ?: return
+        val username = _uiState.value.user?.username ?: "Anônimo" // Usa o username do perfil carregado
+        val comment = Comment(username = username, text = commentText)
+
+        viewModelScope.launch {
+            try {
+                postRepository.addComment(postId, comment)
+                // O listener em tempo real no Feed cuidaria disso, 
+                // mas aqui no perfil talvez precisemos recarregar ou confiar no Firestore.
+                // Como não temos listener em tempo real no perfil ainda, vou recarregar os posts.
+                val userPosts = userRepository.getPostsForUser(currentUser.uid)
+                _uiState.value = _uiState.value.copy(posts = userPosts)
+            } catch (e: Exception) {
+                // Tratar erro
             }
         }
     }

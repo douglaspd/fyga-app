@@ -9,7 +9,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.ModeComment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -122,7 +124,8 @@ fun ProfileScreen(
                             PostCardProfile(
                                 post = post,
                                 isLiked = isLiked,
-                                onLikeClick = { viewModel.toggleLike(post.id) }
+                                onLikeClick = { viewModel.toggleLike(post.id) },
+                                onCommentClick = { postId, text -> viewModel.addComment(postId, text) }
                             )
                         }
                     }
@@ -132,16 +135,16 @@ fun ProfileScreen(
     }
 }
 
-/**
- * Card de Post para a tela de Perfil. Este é um componente "burro" (stateless).
- * Ele apenas exibe os dados que recebe e delega as ações para cima.
- */
 @Composable
 private fun PostCardProfile(
     post: Post,
-    isLiked: Boolean, // Recebe se o post está curtido ou não
-    onLikeClick: () -> Unit // Recebe a ação a ser executada no clique
+    isLiked: Boolean,
+    onLikeClick: () -> Unit,
+    onCommentClick: (String, String) -> Unit
 ) {
+    var commentsVisible by remember { mutableStateOf(false) }
+    var newCommentText by remember { mutableStateOf("") }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -159,15 +162,62 @@ private fun PostCardProfile(
         )
         Spacer(modifier = Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onLikeClick) { // Ação de clique é delegada
+            IconButton(onClick = onLikeClick) {
                 Icon(
                     imageVector = Icons.Default.Favorite,
                     contentDescription = "Curtir",
-                    tint = if (isLiked) Color.Red else Color.Gray // Cor baseada no estado recebido
+                    tint = if (isLiked) Color.Red else Color.Gray
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            IconButton(onClick = { commentsVisible = !commentsVisible }) {
+                Icon(
+                    imageVector = Icons.Default.ModeComment,
+                    contentDescription = "Comentar",
+                    tint = Color.Gray
                 )
             }
             Spacer(modifier = Modifier.width(10.dp))
             Text(post.description, color = Color.White, fontSize = 14.sp)
+        }
+
+        if (commentsVisible) {
+            Column(modifier = Modifier.padding(top = 8.dp)) {
+                post.comments.forEach { comment ->
+                    Row {
+                        Text(comment.username, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 14.sp)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(comment.text, color = Color.White, fontSize = 14.sp)
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = newCommentText,
+                        onValueChange = { newCommentText = it },
+                        placeholder = { Text("Adicione um comentário...") },
+                        modifier = Modifier.weight(1f),
+                        colors = TextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            cursorColor = Color.White,
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Gray,
+                            unfocusedIndicatorColor = Color.DarkGray
+                        )
+                    )
+                    IconButton(onClick = {
+                        if (newCommentText.isNotBlank()) {
+                            onCommentClick(post.id, newCommentText)
+                            newCommentText = ""
+                        }
+                    }) {
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Publicar", tint = Color.White)
+                    }
+                }
+            }
         }
     }
 }

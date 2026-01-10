@@ -8,26 +8,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun RegisterScreen(
-    isLoading: Boolean = false,
-    onRegisterClick: () -> Unit = {},
-    onTypeRegister: () -> Unit = {},
-    onRegisterSuccess: () -> Unit = {},
-    onBack: () -> Unit = {}, // 🔹 adicionamos esse parâmetro que o MainActivity espera
-    modifier: Modifier = Modifier
+    onNext: () -> Unit,
+    onBack: () -> Unit,
+    viewModel: RegisterViewModel = viewModel()
 ) {
     Box(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
             .padding(24.dp),
-            contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = "Eu sou",
@@ -38,7 +37,10 @@ fun RegisterScreen(
             Spacer(Modifier.height(32.dp))
 
             Button(
-                onClick = onRegisterClick,
+                onClick = {
+                    viewModel.onRoleSelected("Gothic")
+                    onNext()
+                },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B0000))
             ) {
@@ -48,7 +50,10 @@ fun RegisterScreen(
             Spacer(Modifier.height(16.dp))
 
             Button(
-                onClick = onRegisterClick,
+                onClick = {
+                    viewModel.onRoleSelected("Hunter")
+                    onNext()
+                },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B0000))
             ) {
@@ -57,7 +62,7 @@ fun RegisterScreen(
 
             Spacer(Modifier.height(32.dp))
 
-            TextButton(onClick = onBack) { // 🔹 botão para voltar à tela de login
+            TextButton(onClick = onBack) {
                 Text("Voltar", color = Color.White)
             }
         }
