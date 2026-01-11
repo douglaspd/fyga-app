@@ -15,8 +15,36 @@ class PostRepository {
     private val db = FirebaseFirestore.getInstance()
     private val postsCollection = db.collection("posts")
 
+    /**
+     * Busca todos os posts (4you).
+     */
     fun getAllPosts(): Flow<List<Post>> = callbackFlow {
         val listener = postsCollection
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    val posts = snapshot.toObjects(Post::class.java)
+                    trySend(posts)
+                }
+            }
+        awaitClose { listener.remove() }
+    }
+
+    /**
+     * Busca posts apenas de usuários específicos (Coven).
+     */
+    fun getFollowedPosts(followingIds: List<String>): Flow<List<Post>> = callbackFlow {
+        if (followingIds.isEmpty()) {
+            trySend(emptyList())
+            return@callbackFlow
+        }
+
+        val listener = postsCollection
+            .whereIn("userId", followingIds)
             .orderBy("timestamp", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
@@ -41,8 +69,7 @@ class PostRepository {
 
     suspend fun toggleLike(postId: String, userId: String) {
         val postRef = postsCollection.document(postId)
-        db.runTransaction {
-            transaction ->
+        db.runTransaction { transaction ->
             val post = transaction.get(postRef)
             val likedBy = post.get("likedBy") as? List<String> ?: emptyList()
 

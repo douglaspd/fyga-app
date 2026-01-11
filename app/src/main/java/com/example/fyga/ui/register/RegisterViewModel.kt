@@ -30,45 +30,77 @@ class RegisterViewModel(
     private val _uiState = MutableStateFlow(RegisterUiState())
     val uiState = _uiState.asStateFlow()
 
-    fun onUsernameChange(value: String) { _uiState.value = _uiState.value.copy(username = value) }
-    fun onBioChange(value: String) { _uiState.value = _uiState.value.copy(bio = value) }
-    fun onAccountTypeChange(value: AccountType) { _uiState.value = _uiState.value.copy(accountType = value) }
-    fun onImageSelected(uri: Uri) { _uiState.value = _uiState.value.copy(selectedImageUri = uri) }
-    fun onRoleSelected(role: String) { _uiState.value = _uiState.value.copy(role = role) }
+    fun onUsernameChange(value: String) {
+        _uiState.value = _uiState.value.copy(username = value, errorMessage = null)
+    }
 
+    fun onBioChange(value: String) {
+        _uiState.value = _uiState.value.copy(bio = value, errorMessage = null)
+    }
+
+    fun onAccountTypeChange(value: AccountType) {
+        _uiState.value = _uiState.value.copy(accountType = value)
+    }
+
+    fun onImageSelected(uri: Uri) {
+        _uiState.value = _uiState.value.copy(selectedImageUri = uri)
+    }
+
+    fun onRoleSelected(role: String) {
+        _uiState.value = _uiState.value.copy(role = role)
+    }
+
+    /**
+     * Finaliza o registro salvando o perfil no Firestore.
+     * Vincula o UID do Firebase Auth ao documento do usuário.
+     */
     fun completeRegistration() {
         val state = _uiState.value
         val currentUser = authRepository.currentUser
 
-        if (state.username.isBlank() || currentUser == null) {
-            _uiState.value = state.copy(errorMessage = "Nome de usuário é obrigatório.")
+        // Validação básica de segurança
+        if (state.username.trim().length < 3) {
+            _uiState.value = state.copy(errorMessage = "O nome de usuário deve ter pelo menos 3 caracteres.")
+            return
+        }
+
+        if (currentUser == null) {
+            _uiState.value = state.copy(errorMessage = "Erro crítico: Usuário não autenticado no Firebase.")
             return
         }
 
         viewModelScope.launch {
-            _uiState.value = state.copy(isLoading = true)
+            _uiState.value = _uiState.value.copy(isLoading = true)
             try {
                 var imageUrl = ""
-                // 1. Upload da foto de perfil se selecionada
+                
+                // 1. Upload da foto de perfil para o Firebase Storage (se houver)
                 state.selectedImageUri?.let { uri ->
                     imageUrl = storageRepository.uploadFile(uri, "profile_pics")
                 }
 
-                // 2. Criar objeto User
+                // 2. Criação do objeto User vinculado ao UID e Telefone reais
                 val user = User(
-                    id = currentUser.uid,
+                    id = currentUser.uid, // O ID do documento será o UID do Firebase
                     username = state.username.trim(),
+                    phoneNumber = currentUser.phoneNumber ?: "", // Vincula o telefone verificado via SMS
                     bio = state.bio.trim(),
                     accountType = state.accountType,
                     profileImageUrl = imageUrl,
-                    role = state.role // Salva a escolha Gothic/Hunter
+                    role = state.role
                 )
 
-                // 3. Salvar no Firestore
+                // 3. Persistência no Firestore através do Repository
                 authRepository.saveUserProfile(user)
+                
+                // 4. Sucesso! O AppNavHost detectará o isSuccess e mandará para o Feed
                 _uiState.value = _uiState.value.copy(isLoading = false, isSuccess = true)
+                
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = e.message)
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false, 
+                    errorMessage = "Falha ao salvar perfil: ${e.localizedMessage}"
+                )
             }
         }
     }

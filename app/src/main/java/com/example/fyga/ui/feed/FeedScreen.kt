@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.ModeComment
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,10 +40,37 @@ fun FeedScreen(
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Fyga", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Black)
-            )
+            Column {
+                CenterAlignedTopAppBar(
+                    title = { Text("Fyga", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold) },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Black)
+                )
+                TabRow(
+                    selectedTabIndex = if (uiState.selectedTab == FeedTab.FOR_YOU) 0 else 1,
+                    containerColor = Color.Black,
+                    contentColor = Color.White,
+                    indicator = { tabPositions ->
+                        if (tabPositions.isNotEmpty()) {
+                            TabRowDefaults.Indicator(
+                                Modifier.tabIndicatorOffset(tabPositions[if (uiState.selectedTab == FeedTab.FOR_YOU) 0 else 1]),
+                                color = Color.Red
+                            )
+                        }
+                    },
+                    divider = {}
+                ) {
+                    Tab(
+                        selected = uiState.selectedTab == FeedTab.FOR_YOU,
+                        onClick = { viewModel.onTabSelected(FeedTab.FOR_YOU) },
+                        text = { Text("4you", fontWeight = FontWeight.Bold) }
+                    )
+                    Tab(
+                        selected = uiState.selectedTab == FeedTab.COVEN,
+                        onClick = { viewModel.onTabSelected(FeedTab.COVEN) },
+                        text = { Text("Coven", fontWeight = FontWeight.Bold) }
+                    )
+                }
+            }
         },
         floatingActionButton = {
             FloatingActionButton(
@@ -69,19 +97,24 @@ fun FeedScreen(
                 uiState.errorMessage != null -> {
                     Text(uiState.errorMessage!!, color = Color.Red)
                 }
+                uiState.posts.isEmpty() && uiState.selectedTab == FeedTab.COVEN -> {
+                    Text("Seu Coven está vazio. Siga novos usuários!", color = Color.Gray)
+                }
                 else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize()
-                    ) {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
                         items(uiState.posts, key = { it.id }) { post ->
                             val isLiked = post.likedBy.contains(uiState.currentUserId)
+                            val isFollowing = uiState.currentUserProfile?.following?.contains(post.userId) ?: false
+                            val isMe = post.userId == uiState.currentUserId
+
                             PostCard(
                                 post = post,
                                 isLiked = isLiked,
+                                isFollowing = isFollowing,
+                                isMe = isMe,
                                 onLikeClick = { viewModel.toggleLike(post.id) },
-                                onCommentClick = { postId, text ->
-                                    viewModel.addComment(postId, text)
-                                }
+                                onCommentClick = { postId, text -> viewModel.addComment(postId, text) },
+                                onFollowClick = { viewModel.toggleFollow(post.userId) }
                             )
                         }
                     }
@@ -95,23 +128,24 @@ fun FeedScreen(
 private fun PostCard(
     post: Post,
     isLiked: Boolean,
+    isFollowing: Boolean,
+    isMe: Boolean,
     onLikeClick: () -> Unit,
-    onCommentClick: (String, String) -> Unit
+    onCommentClick: (String, String) -> Unit,
+    onFollowClick: () -> Unit
 ) {
     var commentsVisible by remember { mutableStateOf(false) }
     var newCommentText by remember { mutableStateOf("") }
 
-    // Lógica para detectar se é vídeo
     val isVideo = post.imageUrl.contains(".mp4", ignoreCase = true) || 
                   post.imageUrl.contains(".mov", ignoreCase = true) ||
-                  post.imageUrl.contains("post_videos", ignoreCase = true) // Baseado na pasta do Storage
+                  post.imageUrl.contains("post_videos", ignoreCase = true)
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 12.dp)
     ) {
-        // Cabeçalho
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = 16.dp)
@@ -122,12 +156,23 @@ private fun PostCard(
                 modifier = Modifier.size(42.dp).clip(CircleShape)
             )
             Spacer(modifier = Modifier.width(10.dp))
-            Text(post.username, color = Color.White, fontWeight = FontWeight.SemiBold)
+            Text(post.username, color = Color.White, fontWeight = FontWeight.Bold)
+            
+            if (!isMe) {
+                Spacer(modifier = Modifier.weight(1f))
+                TextButton(onClick = onFollowClick) {
+                    Text(
+                        text = if (isFollowing) "Kindred" else "Follow",
+                        color = if (isFollowing) Color.Gray else Color.Red,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Mídia (Imagem ou Vídeo)
         if (isVideo) {
             VideoPlayer(videoUrl = post.imageUrl)
         } else {
@@ -141,7 +186,6 @@ private fun PostCard(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Ações
         Row(
             modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -159,12 +203,8 @@ private fun PostCard(
             }
         }
 
-        // Descrição
         Text(post.description, color = Color.White, fontSize = 15.sp, modifier = Modifier.padding(horizontal = 16.dp))
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Seção de comentários
         if (commentsVisible) {
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 post.comments.forEach { comment ->

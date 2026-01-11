@@ -1,5 +1,8 @@
 package com.example.fyga.ui.register
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -8,55 +11,52 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBackIosNew
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.fyga.data.model.AccountType
-import com.example.fyga.data.model.User
-import com.example.fyga.ui.login.auth.AuthLoginViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FinalRegisterScreen(
-    authViewModel: AuthLoginViewModel,
     onRegisterComplete: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    viewModel: RegisterViewModel = viewModel()
 ) {
-    var username by remember { mutableStateOf("") }
-    var bio by remember { mutableStateOf("") }
-    var accountType by remember { mutableStateOf(AccountType.OPENED) }
-    var isLoading by remember { mutableStateOf(false) }
+    val uiState by viewModel.uiState.collectAsState()
 
-    val currentUser = authViewModel.currentUser
+    // Seletor de imagem da galeria
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { viewModel.onImageSelected(it) }
+    }
+
+    // Observa o sucesso do registro para navegar
+    LaunchedEffect(uiState.isSuccess) {
+        if (uiState.isSuccess) {
+            onRegisterComplete()
+        }
+    }
 
     Scaffold(
         containerColor = Color.Black,
         topBar = {
             CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        "Fyga",
-                        color = Color.White,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
+                title = { Text("Finalizar Perfil", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBackIosNew,
-                            contentDescription = "Voltar",
-                            tint = Color.White
-                        )
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Black)
@@ -72,121 +72,154 @@ fun FinalRegisterScreen(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "Personalize seu perfil",
+                text = "Conte um pouco sobre você",
                 color = Color.White,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 20.sp
+                fontSize = 18.sp
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            Image(
-                painter = rememberAsyncImagePainter(currentUser?.photoUrl),
-                contentDescription = "Avatar",
+            // Foto de Perfil Selecionável
+            Box(
                 modifier = Modifier
-                    .size(90.dp)
+                    .size(110.dp)
                     .clip(CircleShape)
-                    .border(2.dp, Color.Red, CircleShape)
-            )
+                    .background(Color.DarkGray)
+                    .border(2.dp, if(uiState.selectedImageUri != null) Color.Red else Color.Gray, CircleShape)
+                    .clickable { imagePickerLauncher.launch("image/*") },
+                contentAlignment = Alignment.Center
+            ) {
+                if (uiState.selectedImageUri != null) {
+                    Image(
+                        painter = rememberAsyncImagePainter(uiState.selectedImageUri),
+                        contentDescription = "Foto de perfil",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Text("Add Foto", color = Color.White, fontSize = 12.sp)
+                }
+            }
 
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Campo: Nome de Usuário com Validação
             OutlinedTextField(
-                value = username,
-                onValueChange = { username = it },
-                label = { Text("Nome de usuário", color = Color.Gray) },
+                value = uiState.username,
+                onValueChange = { viewModel.onUsernameChange(it) },
+                label = { Text("Nome de usuário (mín. 3)") },
                 singleLine = true,
+                isError = uiState.username.isNotEmpty() && uiState.username.length < 3,
                 modifier = Modifier.fillMaxWidth(),
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Red,
-                    unfocusedContainerColor = Color.DarkGray,
-                    focusedTextColor = Color.White
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Red,
+                    unfocusedIndicatorColor = Color.Gray,
+                    errorContainerColor = Color.Transparent
                 )
             )
+            if (uiState.username.isNotEmpty() && uiState.username.length < 3) {
+                Text(
+                    "Mínimo de 3 caracteres",
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier.align(Alignment.Start).padding(start = 8.dp, top = 4.dp)
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Campo: Bio
             OutlinedTextField(
-                value = bio,
-                onValueChange = { bio = it },
-                label = { Text("Bio (opcional)", color = Color.Gray) },
+                value = uiState.bio,
+                onValueChange = { viewModel.onBioChange(it) },
+                label = { Text("Bio (opcional)") },
                 modifier = Modifier.fillMaxWidth(),
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Red,
-                    unfocusedContainerColor = Color.DarkGray,
-                    focusedTextColor = Color.White
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Red,
+                    unfocusedIndicatorColor = Color.Gray
                 )
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Toggle OPENED / CLOSED
+            // Seleção de Tipo de Conta
             Row(
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 AccountTypeToggle(
-                    selected = accountType == AccountType.OPENED,
-                    label = "Opened",
-                    onClick = { accountType = AccountType.OPENED }
+                    modifier = Modifier.weight(1f),
+                    selected = uiState.accountType == AccountType.OPENED,
+                    label = "Aberta",
+                    onClick = { viewModel.onAccountTypeChange(AccountType.OPENED) }
                 )
                 AccountTypeToggle(
-                    selected = accountType == AccountType.CLOSED,
-                    label = "Closed",
-                    onClick = { accountType = AccountType.CLOSED }
+                    modifier = Modifier.weight(1f),
+                    selected = uiState.accountType == AccountType.CLOSED,
+                    label = "Fechada",
+                    onClick = { viewModel.onAccountTypeChange(AccountType.CLOSED) }
                 )
             }
 
-            Spacer(modifier = Modifier.height(30.dp))
+            Spacer(modifier = Modifier.height(40.dp))
 
+            // Botão Finalizar
             Button(
-                onClick = {
-                    if (username.isNotBlank() && currentUser != null) {
-                        isLoading = true
-                        val user = User(
-                            id = currentUser.uid,
-                            username = username.trim(),
-                            email = currentUser.email ?: "",
-                            bio = bio.trim(),
-                            accountType = accountType
-                        )
-                        authViewModel.saveUserProfile(user) {
-                            isLoading = false
-                            authViewModel.saveUserProfile(user) {
-                                isLoading = false
-                                onRegisterComplete()
-                            }
-                        }
-                    }
-                },
+                onClick = { viewModel.completeRegistration() },
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                enabled = !uiState.isLoading && uiState.username.length >= 3
             ) {
-                if (isLoading)
-                    CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp)
-                else
-                    Text("Entrar no GothWolrd", color = Color.White, fontSize = 18.sp)
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                } else {
+                    Text("Concluir Cadastro", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            // Exibição de Erro do ViewModel
+            if (uiState.errorMessage != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(uiState.errorMessage!!, color = Color.Red, fontSize = 14.sp)
             }
         }
     }
 }
 
 @Composable
-fun AccountTypeToggle(selected: Boolean, label: String, onClick: () -> Unit) {
-    val bgColor = if (selected) Color.Red else Color.DarkGray
-    val textColor = if (selected) Color.White else Color.LightGray
+fun AccountTypeToggle(
+    modifier: Modifier = Modifier,
+    selected: Boolean,
+    label: String,
+    onClick: () -> Unit
+) {
+    val bgColor = if (selected) Color.Red else Color(0xFF1A1A1A)
+    val borderColor = if (selected) Color.Red else Color.Gray
 
     Box(
-        modifier = Modifier
-            .width(130.dp)
-            .height(45.dp)
-            .background(bgColor, RoundedCornerShape(12.dp))
-            .wrapContentSize(Alignment.Center)
-            .clickable { onClick() }
+        modifier = modifier
+            .height(48.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(bgColor)
+            .border(1.dp, borderColor, RoundedCornerShape(12.dp))
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
     ) {
-        Text(label, color = textColor, fontWeight = FontWeight.SemiBold)
+        Text(
+            text = label,
+            color = Color.White,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            fontSize = 14.sp
+        )
     }
 }
-

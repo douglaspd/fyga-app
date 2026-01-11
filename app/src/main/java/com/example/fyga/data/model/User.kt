@@ -1,18 +1,20 @@
 package com.example.fyga.data.model
 
-data class User(
-    val id: String = "",
-    val username: String = "",
-    val email: String = "",
-    val profileImageUrl: String? = null,
-    val bio: String? = null,
-    val accountType: AccountType = AccountType.OPENED, // OPENED ou CLOSED
-    val balance: Double = 0.0,
-    val totalEarned: Double = 0.0,
-    val createdAt: Long = System.currentTimeMillis()
-)
+import com.google.firebase.firestore.DocumentId
 
 enum class AccountType {
-    OPENED,
-    CLOSED
+    OPENED, CLOSED
 }
+
+data class User(
+    @DocumentId
+    val id: String = "",
+    val username: String = "",
+    val phoneNumber: String = "", // Adicionado telefone
+    val bio: String = "",
+    val profileImageUrl: String = "",
+    val accountType: AccountType = AccountType.OPENED,
+    val role: String = "", // Gothic ou Hunter
+    val following: List<String> = emptyList(),
+    val followers: List<String> = emptyList()
+)
